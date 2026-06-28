@@ -189,4 +189,150 @@ describe('calculateAnnualTenantRevenue', () => {
     // Tenant B: 4 * 800 = 3200 (Mar, Apr, May, Jun)
     expect(total).toBeCloseTo(15200, 0);
   });
+
+  it('returns 0 for empty tenant list', () => {
+    expect(calculateAnnualTenantRevenue([], 2024)).toBe(0);
+  });
+
+  it('handles tenant ending before the queried year', () => {
+    const tenants = [
+      { id: 1, name: 'Past', monthlyRent: 500, startDate: '2023-01-01', endDate: '2023-12-31' },
+    ];
+    expect(calculateAnnualTenantRevenue(tenants, 2024)).toBe(0);
+  });
+
+  it('handles tenant starting after the queried year', () => {
+    const tenants = [
+      { id: 1, name: 'Future', monthlyRent: 500, startDate: '2025-01-01', endDate: null },
+    ];
+    expect(calculateAnnualTenantRevenue(tenants, 2024)).toBe(0);
+  });
+
+  it('calculates correctly across year boundary', () => {
+    const tenants = [
+      { id: 1, name: 'Cross', monthlyRent: 600, startDate: '2023-06-15', endDate: '2024-03-20' },
+    ];
+    const total = calculateAnnualTenantRevenue(tenants, 2024);
+    // Jan: full (600), Feb: full (600), Mar: 20 days (600/31*20 = 387.10)
+    // Total: 600 + 600 + 387.10 = 1587.10
+    expect(total).toBeCloseTo(1587.10, 0);
+  });
+
+  it('handles February in a leap year', () => {
+    const tenants = [
+      { id: 1, name: 'Leap', monthlyRent: 930, startDate: '2024-02-01', endDate: '2024-02-29' },
+    ];
+    // Feb 2024 has 29 days, 930/29*29 = 930
+    expect(calculateAnnualTenantRevenue(tenants, 2024)).toBeCloseTo(930, 0);
+  });
+});
+
+describe('getTenantRevenueForMonth additional edge cases', () => {
+  it('handles DST transition month (March in EU)', () => {
+    const result = getTenantRevenueForMonth(
+      { id: 1, name: 'DST', monthlyRent: 930, startDate: '2024-03-01', endDate: null },
+      2024, 3
+    );
+    expect(result.revenue).toBeCloseTo(930, 0);
+    expect(result.activeDays).toBe(31);
+  });
+
+  it('handles 31-day month', () => {
+    const result = getTenantRevenueForMonth(
+      { id: 1, name: 'Long', monthlyRent: 1240, startDate: '2024-01-15', endDate: null },
+      2024, 1
+    );
+    // 1240 / 31 * 17 days (Jan 15-31) = 680
+    expect(result.revenue).toBeCloseTo(680, 0);
+    expect(result.activeDays).toBe(17);
+  });
+
+  it('handles 28-day February (non-leap)', () => {
+    const result = getTenantRevenueForMonth(
+      { id: 1, name: 'Feb', monthlyRent: 840, startDate: '2025-02-01', endDate: '2025-02-28' },
+      2025, 2
+    );
+    expect(result.revenue).toBeCloseTo(840, 0);
+    expect(result.activeDays).toBe(28);
+  });
+
+  it('handles tenant starting on last day of month', () => {
+    const result = getTenantRevenueForMonth(
+      { id: 1, name: 'LastDay', monthlyRent: 930, startDate: '2024-06-30', endDate: null },
+      2024, 6
+    );
+    // 930 / 30 * 1 day = 31
+    expect(result.revenue).toBeCloseTo(31, 0);
+    expect(result.activeDays).toBe(1);
+  });
+
+  it('handles tenant ending on first day of month', () => {
+    const result = getTenantRevenueForMonth(
+      { id: 1, name: 'FirstDay', monthlyRent: 930, startDate: '2024-05-01', endDate: '2024-06-01' },
+      2024, 6
+    );
+    // 930 / 30 * 1 day = 31
+    expect(result.revenue).toBeCloseTo(31, 0);
+    expect(result.activeDays).toBe(1);
+  });
+});
+
+describe('calculateAnnualLoanPayments additional edge cases', () => {
+  it('returns correct principal-only when interest rate is 0 across full year', () => {
+    const result = calculateAnnualLoanPayments({
+      principal: 120000,
+      interestRate: 0,
+      termYears: 10,
+      startDate: '2024-01-01',
+      yearToQuery: 2025,
+    });
+    expect(result.annualPrincipal).toBeCloseTo(12000, 0); // 1000 * 12
+    expect(result.annualInterest).toBe(0);
+    expect(result.annualTotalPayment).toBeCloseTo(12000, 0);
+  });
+
+  it('returns zero for year after loan is fully paid', () => {
+    const result = calculateAnnualLoanPayments({
+      principal: 12000,
+      interestRate: 0,
+      termYears: 1,
+      startDate: '2024-01-01',
+      yearToQuery: 2025,
+    });
+    expect(result.annualInterest).toBe(0);
+    expect(result.annualPrincipal).toBe(0);
+  });
+
+  it('returns correct partial first year with fractional month start', () => {
+    const result = calculateAnnualLoanPayments({
+      principal: 120000,
+      interestRate: 5,
+      termYears: 30,
+      startDate: '2024-06-15',
+      yearToQuery: 2024,
+    });
+    // Should have payments for 7 months (Jun-Dec)
+    expect(result.annualPrincipal).toBeGreaterThan(0);
+    expect(result.annualInterest).toBeGreaterThan(0);
+    expect(result.annualInterest + result.annualPrincipal).toBeCloseTo(result.annualTotalPayment, 2);
+  });
+
+  it('decreases interest portion over time', () => {
+    const r1 = calculateAnnualLoanPayments({
+      principal: 150000,
+      interestRate: 3,
+      termYears: 30,
+      startDate: '2024-01-01',
+      yearToQuery: 2025,
+    });
+    const r10 = calculateAnnualLoanPayments({
+      principal: 150000,
+      interestRate: 3,
+      termYears: 30,
+      startDate: '2024-01-01',
+      yearToQuery: 2034,
+    });
+    expect(r10.annualInterest).toBeLessThan(r1.annualInterest);
+    expect(r10.annualPrincipal).toBeGreaterThan(r1.annualPrincipal);
+  });
 });
