@@ -1,0 +1,4 @@
+#!/bin/bash
+set -euo pipefail
+echo "→ pre-push: running unit tests..."
+npm test
