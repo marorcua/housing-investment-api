@@ -7,6 +7,7 @@ import { eq, and } from 'drizzle-orm';
 import { eurosToCents, centsToEuros } from '../utils/money.js';
 
 const tenantsRoute = new Hono();
+const increaseRoute = new Hono();
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -68,7 +69,7 @@ tenantsRoute.delete('/:id', async (c) => {
   return c.json({ message: 'Tenant deleted' });
 });
 
-// --- Rent Increase sub-routes ---
+// --- Rent Increase sub-routes (nested to avoid routing conflicts) ---
 
 const increaseSchema = z.object({
   yearOffset: z.number().int().positive(),
@@ -77,8 +78,8 @@ const increaseSchema = z.object({
 });
 
 // GET all increases for a tenant
-tenantsRoute.get('/:tenantId/increases', async (c) => {
-  const tenantId = parseInt(c.req.param('tenantId'));
+increaseRoute.get('/', async (c) => {
+  const tenantId = parseInt(c.req.param('tenantId')!);
   const res = await db.select().from(rentIncreases).where(eq(rentIncreases.tenantId, tenantId));
   return c.json(res.map(inc => ({
     id: inc.id,
@@ -90,8 +91,8 @@ tenantsRoute.get('/:tenantId/increases', async (c) => {
 });
 
 // POST create a rent increase
-tenantsRoute.post('/:tenantId/increases', zValidator('json', increaseSchema), async (c) => {
-  const tenantId = parseInt(c.req.param('tenantId'));
+increaseRoute.post('/', zValidator('json', increaseSchema), async (c) => {
+  const tenantId = parseInt(c.req.param('tenantId')!);
   const data = c.req.valid('json');
   const existing = await db.select().from(rentIncreases)
     .where(and(eq(rentIncreases.tenantId, tenantId), eq(rentIncreases.yearOffset, data.yearOffset)));
@@ -112,7 +113,7 @@ tenantsRoute.post('/:tenantId/increases', zValidator('json', increaseSchema), as
 });
 
 // PATCH update a rent increase
-tenantsRoute.patch('/:tenantId/increases/:increaseId', zValidator('json', increaseSchema.partial()), async (c) => {
+increaseRoute.patch('/:increaseId', zValidator('json', increaseSchema.partial()), async (c) => {
   const increaseId = parseInt(c.req.param('increaseId'));
   const data = c.req.valid('json');
   const dbData: Record<string, unknown> = {};
@@ -131,11 +132,13 @@ tenantsRoute.patch('/:tenantId/increases/:increaseId', zValidator('json', increa
 });
 
 // DELETE a rent increase
-tenantsRoute.delete('/:tenantId/increases/:increaseId', async (c) => {
+increaseRoute.delete('/:increaseId', async (c) => {
   const increaseId = parseInt(c.req.param('increaseId'));
   const result = await db.delete(rentIncreases).where(eq(rentIncreases.id, increaseId)).returning();
   if (result.length === 0) return c.json({ error: 'Rent increase not found' }, 404);
   return c.json({ message: 'Rent increase deleted' });
 });
+
+tenantsRoute.route('/:tenantId/increases', increaseRoute);
 
 export default tenantsRoute;

@@ -63,6 +63,7 @@ haciendaRoute.get('/summary/:propertyId', async (c) => {
       termYears: l.termYears,
       startDate: l.startDate,
       yearToQuery: queryYearNum,
+      actualPayment: l.actualPayment ? centsToEuros(l.actualPayment) : undefined,
     });
     loanInterests += breakdown.annualInterest;
     loanPrincipals += breakdown.annualPrincipal;
@@ -85,8 +86,12 @@ haciendaRoute.get('/summary/:propertyId', async (c) => {
     const startYear = new Date(re.startDate).getFullYear();
     let annualCost = 0;
     if (startYear <= queryYearNum) {
-      const amountEuros = centsToEuros(re.amount);
-      annualCost = re.frequency === 'monthly' ? amountEuros * 12 : amountEuros;
+      if (re.percentage !== null) {
+        annualCost = (re.percentage / 100) * tenantRevenue;
+      } else {
+        const amountEuros = centsToEuros(re.amount);
+        annualCost = re.frequency === 'monthly' ? amountEuros * 12 : amountEuros;
+      }
     }
     recurringTotal += annualCost;
     return {
@@ -94,6 +99,7 @@ haciendaRoute.get('/summary/:propertyId', async (c) => {
       name: re.name,
       type: re.type,
       amount: centsToEuros(re.amount),
+      percentage: re.percentage ?? undefined,
       frequency: re.frequency,
       startDate: re.startDate,
       annualCost,

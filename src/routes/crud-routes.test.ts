@@ -222,6 +222,89 @@ describe('tenants route', () => {
     const res = await app.request('/tenants/999', { method: 'DELETE' });
     expect(res.status).toBe(404);
   });
+
+  describe('rent increases', () => {
+    const increaseFixture = { id: 1, tenantId: 1, yearOffset: 1, percentage: 2, applied: 0 };
+
+    it('GET /:tenantId/increases — lists increases', async () => {
+      mockResolve([increaseFixture]);
+      const res = await app.request('/tenants/1/increases');
+      expect(res.status).toBe(200);
+      const body = await res.json() as any[];
+      expect(body.length).toBe(1);
+      expect(body[0].yearOffset).toBe(1);
+      expect(body[0].percentage).toBe(2);
+      expect(body[0].applied).toBe(false);
+    });
+
+    it('GET /:tenantId/increases — empty list', async () => {
+      mockResolve([]);
+      const res = await app.request('/tenants/2/increases');
+      expect(res.status).toBe(200);
+      expect((await res.json())).toEqual([]);
+    });
+
+    it('POST /:tenantId/increases — creates increase', async () => {
+      // First then() call from select (dup check) returns [], second from insert returns created
+      let callCount = 0;
+      mockChain.then.mockImplementation((resolve: any) => {
+        const data = callCount === 0 ? [] : [{ id: 2, tenantId: 1, yearOffset: 2, percentage: 3, applied: 0 }];
+        callCount++;
+        return Promise.resolve(data).then(resolve);
+      });
+      const res = await app.request('/tenants/1/increases', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ yearOffset: 2, percentage: 3 }),
+      });
+      expect(res.status).toBe(201);
+      const body = await res.json() as any;
+      expect(body.yearOffset).toBe(2);
+      expect(body.percentage).toBe(3);
+      expect(body.applied).toBe(false);
+    });
+
+    it('POST /:tenantId/increases — 409 duplicate year', async () => {
+      mockResolve([increaseFixture]);
+      const res = await app.request('/tenants/1/increases', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ yearOffset: 1, percentage: 5 }),
+      });
+      expect(res.status).toBe(409);
+    });
+
+    it('PATCH /:tenantId/increases/:increaseId — updates increase', async () => {
+      mockResolve([{ id: 1, tenantId: 1, yearOffset: 1, percentage: 3, applied: 1 }]);
+      const res = await app.request('/tenants/1/increases/1', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ percentage: 3, applied: true }),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json() as any;
+      expect(body.percentage).toBe(3);
+      expect(body.applied).toBe(true);
+    });
+
+    it('PATCH /:tenantId/increases/:increaseId — 404', async () => {
+      mockResolve([]);
+      const res = await app.request('/tenants/1/increases/999', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ percentage: 10 }),
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it('DELETE /:tenantId/increases/:increaseId — deletes increase', async () => {
+      mockResolve([{ id: 1 }]);
+      const res = await app.request('/tenants/1/increases/1', { method: 'DELETE' });
+      expect(res.status).toBe(200);
+    });
+
+    it('DELETE /:tenantId/increases/:increaseId — 404', async () => {
+      mockResolve([]);
+      const res = await app.request('/tenants/1/increases/999', { method: 'DELETE' });
+      expect(res.status).toBe(404);
+    });
+  });
 });
 
 describe('loans route', () => {

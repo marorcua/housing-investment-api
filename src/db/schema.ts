@@ -44,6 +44,7 @@ export const loans = sqliteTable('loans', {
   interestRate: real('interest_rate').notNull(),
   termYears: integer('term_years').notNull(),
   startDate: text('start_date').notNull(),
+  actualPayment: integer('actual_payment'), // cents — override monthly payment from bank statement
 });
 
 export const rentIncreases = sqliteTable('rent_increases', {
@@ -59,7 +60,8 @@ export const recurringExpenses = sqliteTable('recurring_expenses', {
   propertyId: integer('property_id').references(() => properties.id, { onDelete: 'cascade' }).notNull(),
   name: text('name').notNull(),
   type: text('type').notNull(), // 'insurance_housing', 'insurance_life', 'tax_ibi', 'community', 'other'
-  amount: integer('amount').notNull(), // cents
+  amount: integer('amount').notNull(), // cents (0 when percentage is used)
+  percentage: real('percentage'), // e.g. 8 for 8% of rental income (null = fixed amount)
   frequency: text('frequency').notNull(), // 'monthly', 'annual'
   startDate: text('start_date').notNull(),
 });

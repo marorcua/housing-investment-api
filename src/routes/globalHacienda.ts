@@ -62,7 +62,8 @@ globalHaciendaRoute.get('/', async (c) => {
         endDate: t.endDate,
         rentIncreases: (t as unknown as { rentIncreases: { yearOffset: number; percentage: number; applied: boolean }[] }).rentIncreases,
       }));
-      totalRevenue += calculateAnnualTenantRevenue(tenantInputs, year);
+      const annualTenantRevenue = calculateAnnualTenantRevenue(tenantInputs, year);
+      totalRevenue += annualTenantRevenue;
 
       // Manual revenues
       const yearlyRevenues = pd.revenues.filter(r => r.date.startsWith(year.toString()));
@@ -82,6 +83,7 @@ globalHaciendaRoute.get('/', async (c) => {
           termYears: loan.termYears,
           startDate: loan.startDate,
           yearToQuery: year,
+          actualPayment: loan.actualPayment ? centsToEuros(loan.actualPayment) : undefined,
         });
         propExpenses += breakdown.annualTotalPayment;
       }
@@ -90,8 +92,12 @@ globalHaciendaRoute.get('/', async (c) => {
       for (const re of pd.recurringExpenses) {
         const startYear = new Date(re.startDate).getFullYear();
         if (startYear <= year) {
-          const amt = centsToEuros(re.amount);
-          propExpenses += re.frequency === 'monthly' ? amt * 12 : amt;
+          if (re.percentage !== null) {
+            propExpenses += (re.percentage / 100) * annualTenantRevenue;
+          } else {
+            const amt = centsToEuros(re.amount);
+            propExpenses += re.frequency === 'monthly' ? amt * 12 : amt;
+          }
         }
       }
 
@@ -109,15 +115,18 @@ globalHaciendaRoute.get('/', async (c) => {
 
     for (const pd of propData) {
       // Tenant revenue for this month (with escalation)
-      for (const t of pd.tenants) {
-        const tr = getTenantRevenueForMonth({
-          id: t.id,
-          name: t.name,
-          monthlyRent: centsToEuros(t.monthlyRent),
-          startDate: t.startDate,
-          endDate: t.endDate,
-          rentIncreases: (t as unknown as { rentIncreases: { yearOffset: number; percentage: number; applied: boolean }[] }).rentIncreases,
-        }, queryYear, month);
+      const tenantInputs: TenantForRevenue[] = pd.tenants.map(t => ({
+        id: t.id,
+        name: t.name,
+        monthlyRent: centsToEuros(t.monthlyRent),
+        startDate: t.startDate,
+        endDate: t.endDate,
+        rentIncreases: (t as unknown as { rentIncreases: { yearOffset: number; percentage: number; applied: boolean }[] }).rentIncreases,
+      }));
+      let tenantRev = 0;
+      for (const t of tenantInputs) {
+        const tr = getTenantRevenueForMonth(t, queryYear, month);
+        tenantRev += tr.revenue;
         monthRev += tr.revenue;
       }
 
@@ -140,7 +149,10 @@ globalHaciendaRoute.get('/', async (c) => {
         const elapsedMonths = (queryYear - sYear) * 12 + (month - sMonth);
         const totalLoanMonths = loan.termYears * 12;
         if (elapsedMonths >= 0 && elapsedMonths < totalLoanMonths) {
-          monthExpTotal += calculateMonthlyPayment(centsToEuros(loan.principal), loan.interestRate, loan.termYears);
+          const payment = loan.actualPayment
+            ? centsToEuros(loan.actualPayment)
+            : calculateMonthlyPayment(centsToEuros(loan.principal), loan.interestRate, loan.termYears);
+          monthExpTotal += payment;
         }
       }
 
@@ -150,10 +162,13 @@ globalHaciendaRoute.get('/', async (c) => {
         const sYear = start.getFullYear();
         const sMonth = start.getMonth() + 1;
         if (queryYear > sYear || (queryYear === sYear && month >= sMonth)) {
+          const monthlyAmt = re.percentage !== null
+            ? (re.percentage / 100) * tenantRev
+            : centsToEuros(re.amount);
           if (re.frequency === 'monthly') {
-            monthExpTotal += centsToEuros(re.amount);
+            monthExpTotal += monthlyAmt;
           } else if (re.frequency === 'annual' && month === sMonth) {
-            monthExpTotal += centsToEuros(re.amount);
+            monthExpTotal += monthlyAmt;
           }
         }
       }

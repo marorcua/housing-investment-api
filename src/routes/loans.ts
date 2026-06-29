@@ -17,9 +17,19 @@ const loanSchema = z.object({
   interestRate: z.number().nonnegative(),
   termYears: z.number().int().positive(),
   startDate: z.string().regex(dateRegex, 'Date must be YYYY-MM-DD'),
+  actualPayment: z.number().positive().optional(),
 });
 
-const formatLoan = (l: typeof loans.$inferSelect) => ({ ...l, principal: centsToEuros(l.principal) });
+const formatLoan = (l: typeof loans.$inferSelect) => ({
+  id: l.id,
+  propertyId: l.propertyId,
+  name: l.name,
+  principal: centsToEuros(l.principal),
+  interestRate: l.interestRate,
+  termYears: l.termYears,
+  startDate: l.startDate,
+  actualPayment: l.actualPayment ? centsToEuros(l.actualPayment) : undefined,
+});
 
 // GET all loans for a property
 loansRoute.get('/property/:propertyId', async (c) => {
@@ -31,7 +41,11 @@ loansRoute.get('/property/:propertyId', async (c) => {
 // POST create loan
 loansRoute.post('/', zValidator('json', loanSchema), async (c) => {
   const data = c.req.valid('json');
-  const result = await db.insert(loans).values({ ...data, principal: eurosToCents(data.principal) }).returning();
+  const result = await db.insert(loans).values({
+    ...data,
+    principal: eurosToCents(data.principal),
+    actualPayment: data.actualPayment ? eurosToCents(data.actualPayment) : null,
+  }).returning();
   return c.json(formatLoan(result[0]), 201);
 });
 
@@ -39,8 +53,13 @@ loansRoute.post('/', zValidator('json', loanSchema), async (c) => {
 loansRoute.patch('/:id', zValidator('json', loanSchema.partial()), async (c) => {
   const id = parseInt(c.req.param('id'));
   const data = c.req.valid('json');
-  const dbData: Record<string, unknown> = { ...data };
+  const dbData: Record<string, unknown> = {};
+  if (data.name !== undefined) dbData.name = data.name;
   if (data.principal !== undefined) dbData.principal = eurosToCents(data.principal);
+  if (data.interestRate !== undefined) dbData.interestRate = data.interestRate;
+  if (data.termYears !== undefined) dbData.termYears = data.termYears;
+  if (data.startDate !== undefined) dbData.startDate = data.startDate;
+  if (data.actualPayment !== undefined) dbData.actualPayment = data.actualPayment ? eurosToCents(data.actualPayment) : null;
   const result = await db.update(loans).set(dbData).where(eq(loans.id, id)).returning();
   
   if (result.length === 0) return c.json({ error: 'Loan not found' }, 404);

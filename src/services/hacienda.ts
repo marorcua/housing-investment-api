@@ -70,10 +70,11 @@ export interface LoanBreakdownInput {
   termYears: number;
   startDate: string; // YYYY-MM-DD
   yearToQuery: number;
+  actualPayment?: number; // override: bank-stated monthly payment
 }
 
 export const calculateAnnualLoanPayments = (input: LoanBreakdownInput) => {
-  const { principal, interestRate, termYears, startDate, yearToQuery } = input;
+  const { principal, interestRate, termYears, startDate, yearToQuery, actualPayment } = input;
   
   const start = new Date(startDate);
   const startYear = start.getFullYear();
@@ -82,13 +83,14 @@ export const calculateAnnualLoanPayments = (input: LoanBreakdownInput) => {
   const monthlyRate = interestRate / 100 / 12;
   const totalMonths = termYears * 12;
   
-  let monthlyPayment = 0;
+  let computedPayment = 0;
   if (interestRate === 0) {
-    monthlyPayment = principal / totalMonths;
+    computedPayment = principal / totalMonths;
   } else {
-    monthlyPayment = principal * (monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) / (Math.pow(1 + monthlyRate, totalMonths) - 1);
+    computedPayment = principal * (monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) / (Math.pow(1 + monthlyRate, totalMonths) - 1);
   }
   
+  const monthlyPayment = actualPayment ?? computedPayment;
   let remainingBalance = principal;
   let annualInterest = 0;
   let annualPrincipal = 0;
