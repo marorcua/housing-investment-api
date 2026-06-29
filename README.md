@@ -93,6 +93,29 @@ Coverage thresholds: 80% statements/functions/lines, 75% branches.
 
 Tests use a mocked database via Vitest — no real database needed. See `vitest.setup.ts` for the mock setup.
 
+## Database Backups
+
+Automatic daily backups run at 3:00am via a LaunchAgent, keeping 7 days of backups.
+
+```bash
+# Manual backup
+npm run db:backup
+
+# Backups are stored in:
+ls backups/
+```
+
+Backups are stored in `backups/` as `local.db.YYYY-MM-DD`. Old backups are auto-pruned after 7 days.
+
+The LaunchAgent is already installed. To reinstall or move the project:
+
+```bash
+launchctl unload ~/Library/LaunchAgents/com.housing-investment.db-backup.plist
+# update paths in scripts/com.housing-investment.db-backup.plist
+cp scripts/com.housing-investment.db-backup.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.housing-investment.db-backup.plist
+```
+
 ## CI
 
 GitHub Actions runs on every push:
