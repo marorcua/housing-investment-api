@@ -100,6 +100,8 @@ GitHub Actions runs on every push:
 1. `npm run build` — TypeScript compilation check
 2. `npx vitest run --coverage` — unit tests with coverage
 
+The web project's CI also checks out this API repo and runs end-to-end Playwright tests against an isolated `test.db`.
+
 ## Tech Stack
 
 - **Runtime:** Node.js + TypeScript
