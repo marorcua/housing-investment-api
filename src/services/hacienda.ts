@@ -116,13 +116,41 @@ export const calculateAnnualLoanPayments = (input: LoanBreakdownInput) => {
   };
 };
 
+export interface RentIncreaseInfo {
+  yearOffset: number;
+  percentage: number;
+  applied: boolean;
+}
+
 export interface TenantForRevenue {
   id: number;
   name: string;
   monthlyRent: number;
   startDate: string; // YYYY-MM-DD
   endDate: string | null;  // YYYY-MM-DD or null (ongoing)
+  rentIncreases?: RentIncreaseInfo[];
 }
+
+/**
+ * Computes the escalated monthly rent for a tenant in a given target year,
+ * compounding all granted increases whose year_offset has been reached.
+ */
+export const computeEscalatedRent = (
+  baseRent: number,
+  startDate: string,
+  targetYear: number,
+  increases: RentIncreaseInfo[]
+): number => {
+  const startYear = new Date(startDate).getFullYear();
+  const yearsSinceStart = targetYear - startYear;
+  let multiplier = 1;
+  for (const inc of increases) {
+    if (inc.applied && inc.yearOffset <= yearsSinceStart) {
+      multiplier *= (1 + inc.percentage / 100);
+    }
+  }
+  return baseRent * multiplier;
+};
 
 /**
  * Pro-rates a tenant's monthly rent to the exact days they were active
@@ -153,7 +181,13 @@ export const getTenantRevenueForMonth = (
   if (overlapStart > overlapEnd) return { revenue: 0, activeDays: 0, totalDays };
 
   const activeDays = overlapEnd.getDate() - overlapStart.getDate() + 1;
-  const revenue = (tenant.monthlyRent / totalDays) * activeDays;
+  const escalated = computeEscalatedRent(
+    tenant.monthlyRent,
+    tenant.startDate,
+    year,
+    tenant.rentIncreases || []
+  );
+  const revenue = (escalated / totalDays) * activeDays;
 
   return { revenue, activeDays, totalDays };
 };

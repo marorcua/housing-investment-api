@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { db } from '../db/index.js';
-import { properties, tenants, loans, recurringExpenses, revenues, expenses } from '../db/schema.js';
+import { properties, tenants, loans, recurringExpenses, revenues, expenses, rentIncreases } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { calculateAnnualTenantRevenue, calculateAnnualLoanPayments, getTenantRevenueForMonth, calculateMonthlyPayment } from '../services/hacienda.js';
 import type { TenantForRevenue } from '../services/hacienda.js';
@@ -15,9 +15,19 @@ globalHaciendaRoute.get('/', async (c) => {
   const allProperties = await db.select().from(properties);
 
   // Pre-fetch all data per property to avoid N+1 in loops
+  const allIncreases = await db.select().from(rentIncreases);
+  const increaseMap = new Map<number, { yearOffset: number; percentage: number; applied: boolean }[]>();
+  for (const inc of allIncreases) {
+    if (!increaseMap.has(inc.tenantId)) increaseMap.set(inc.tenantId, []);
+    increaseMap.get(inc.tenantId)!.push({ yearOffset: inc.yearOffset, percentage: inc.percentage, applied: !!inc.applied });
+  }
+
   const propData = await Promise.all(allProperties.map(async (prop) => ({
     id: prop.id,
-    tenants: await db.select().from(tenants).where(eq(tenants.propertyId, prop.id)),
+    tenants: (await db.select().from(tenants).where(eq(tenants.propertyId, prop.id))).map(t => ({
+      ...t,
+      rentIncreases: increaseMap.get(t.id) || [],
+    })),
     loans: await db.select().from(loans).where(eq(loans.propertyId, prop.id)),
     recurringExpenses: await db.select().from(recurringExpenses).where(eq(recurringExpenses.propertyId, prop.id)),
     revenues: await db.select().from(revenues).where(eq(revenues.propertyId, prop.id)),
@@ -43,13 +53,14 @@ globalHaciendaRoute.get('/', async (c) => {
     let totalExpenses = 0;
 
     for (const pd of propData) {
-      // Tenant revenue
+      // Tenant revenue with escalation
       const tenantInputs: TenantForRevenue[] = pd.tenants.map(t => ({
         id: t.id,
         name: t.name,
         monthlyRent: centsToEuros(t.monthlyRent),
         startDate: t.startDate,
         endDate: t.endDate,
+        rentIncreases: (t as unknown as { rentIncreases: { yearOffset: number; percentage: number; applied: boolean }[] }).rentIncreases,
       }));
       totalRevenue += calculateAnnualTenantRevenue(tenantInputs, year);
 
@@ -97,7 +108,7 @@ globalHaciendaRoute.get('/', async (c) => {
     let monthExp = 0;
 
     for (const pd of propData) {
-      // Tenant revenue for this month
+      // Tenant revenue for this month (with escalation)
       for (const t of pd.tenants) {
         const tr = getTenantRevenueForMonth({
           id: t.id,
@@ -105,6 +116,7 @@ globalHaciendaRoute.get('/', async (c) => {
           monthlyRent: centsToEuros(t.monthlyRent),
           startDate: t.startDate,
           endDate: t.endDate,
+          rentIncreases: (t as unknown as { rentIncreases: { yearOffset: number; percentage: number; applied: boolean }[] }).rentIncreases,
         }, queryYear, month);
         monthRev += tr.revenue;
       }

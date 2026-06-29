@@ -62,6 +62,7 @@ describe('hacienda route', () => {
       [{ id: 1, name: 'Test Property', purchasePrice: 20000000, cadastralValue: 15000000, buildingValue: 12000000 }],
       [{ id: 1, propertyId: 1, amount: 50000, date: '2024-06-01', description: null }],
       [{ id: 1, name: 'Tenant A', monthlyRent: 80000, startDate: '2024-01-01', endDate: null }],
+      [],  // rentIncreases for Tenant A
       [
         { id: 1, propertyId: 1, amount: 20000, type: 'interest', date: '2024-03-01', description: null },
         { id: 2, propertyId: 1, amount: 15000, type: 'repair', date: '2024-04-01', description: null },

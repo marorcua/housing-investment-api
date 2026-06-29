@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
 import { db } from '../db/index.js';
-import { properties, revenues, expenses, loans, recurringExpenses, tenants } from '../db/schema.js';
+import { properties, revenues, expenses, loans, recurringExpenses, tenants, rentIncreases } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { calculateAnnualAmortization, calculateNetYield, calculateAnnualLoanPayments, calculateAnnualTenantRevenue } from '../services/hacienda.js';
-import type { TenantForRevenue } from '../services/hacienda.js';
+import type { TenantForRevenue, RentIncreaseInfo } from '../services/hacienda.js';
 import { centsToEuros } from '../utils/money.js';
 
 const haciendaRoute = new Hono();
@@ -25,15 +25,24 @@ haciendaRoute.get('/summary/:propertyId', async (c) => {
   const yearlyRevenues = allRevenues.filter(r => r.date.startsWith(year));
   const manualRevenue = yearlyRevenues.reduce((acc, r) => acc + centsToEuros(r.amount), 0);
 
-  // Calculate tenant-derived revenue (rent contracts)
+  // Calculate tenant-derived revenue (rent contracts) with escalation
   const propertyTenants = await db.select().from(tenants).where(eq(tenants.propertyId, propertyId));
-  const tenantRevenueInputs: TenantForRevenue[] = propertyTenants.map(t => ({
-    id: t.id,
-    name: t.name,
-    monthlyRent: centsToEuros(t.monthlyRent),
-    startDate: t.startDate,
-    endDate: t.endDate,
-  }));
+  const tenantRevenueInputs: TenantForRevenue[] = [];
+  for (const t of propertyTenants) {
+    const increases = await db.select().from(rentIncreases).where(eq(rentIncreases.tenantId, t.id));
+    tenantRevenueInputs.push({
+      id: t.id,
+      name: t.name,
+      monthlyRent: centsToEuros(t.monthlyRent),
+      startDate: t.startDate,
+      endDate: t.endDate,
+      rentIncreases: increases.map(i => ({
+        yearOffset: i.yearOffset,
+        percentage: i.percentage,
+        applied: !!i.applied,
+      })),
+    });
+  }
   const tenantRevenue = calculateAnnualTenantRevenue(tenantRevenueInputs, queryYearNum);
   const totalRevenue = manualRevenue + tenantRevenue;
 

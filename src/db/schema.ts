@@ -46,6 +46,14 @@ export const loans = sqliteTable('loans', {
   startDate: text('start_date').notNull(),
 });
 
+export const rentIncreases = sqliteTable('rent_increases', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  tenantId: integer('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }).notNull(),
+  yearOffset: integer('year_offset').notNull(),
+  percentage: real('percentage').notNull(), // e.g. 2.5 for 2.5%
+  applied: integer('applied').notNull().default(0), // 0 = pending, 1 = granted
+});
+
 export const recurringExpenses = sqliteTable('recurring_expenses', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   propertyId: integer('property_id').references(() => properties.id, { onDelete: 'cascade' }).notNull(),
