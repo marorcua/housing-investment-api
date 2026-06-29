@@ -30,6 +30,7 @@ vi.mock('../services/hacienda.js', () => ({
   calculateMonthlyPayment: vi.fn(() => 500),
 }));
 
+import { calculateAnnualTenantRevenue, calculateAnnualLoanPayments, getTenantRevenueForMonth } from '../services/hacienda.js';
 import globalHaciendaRoute from './globalHacienda.js';
 
 const app = new Hono();
@@ -96,5 +97,53 @@ describe('globalHacienda route', () => {
     expect(res.status).toBe(200);
     const body: any = await res.json();
     expect(body.annual.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('GET / — handles percentage-based expenses and loan actualPayment', async () => {
+    const propertiesChain = makeChainResolve([
+      { id: 1, name: 'Prop', purchasePrice: 20000000, purchaseDate: '2023-01-01', cadastralValue: null, buildingValue: null }
+    ]);
+    const rentIncreasesChain = makeChainResolve([]);
+    const tenantsChain = makeChainResolve([
+      { id: 1, propertyId: 1, name: 'Tenant', monthlyRent: 100000, startDate: '2024-01-01', endDate: null },
+    ]);
+    const loansChain = makeChainResolve([
+      { id: 1, propertyId: 1, name: 'Loan', principal: 100000000, interestRate: 3, termYears: 25, startDate: '2024-01-01', actualPayment: 50000 },
+    ]);
+    const recurringChain = makeChainResolve([
+      { id: 1, propertyId: 1, name: 'Community', type: 'community', amount: 0, percentage: 8, frequency: 'monthly', startDate: '2024-01-01' },
+    ]);
+    const emptyChain = makeChainResolve([]);
+
+    mockDb.select
+      .mockReturnValueOnce(propertiesChain)
+      .mockReturnValueOnce(rentIncreasesChain)
+      .mockReturnValueOnce(tenantsChain)
+      .mockReturnValueOnce(loansChain)
+      .mockReturnValueOnce(recurringChain)
+      .mockReturnValueOnce(emptyChain)
+      .mockReturnValueOnce(emptyChain);
+
+    const res = await app.request('/hacienda-global?year=2024');
+    expect(res.status).toBe(200);
+    const body: any = await res.json();
+
+    // Annual: 12000 tenant rev, 5000 loan + 960 (8% of 12000) expenses = 5960, net = 6040
+    const yearData = body.annual.find((d: any) => d.year === 2024);
+    expect(yearData.revenue).toBe(12000);
+    expect(yearData.expenses).toBe(5960);
+    expect(yearData.net).toBe(6040);
+
+    // Monthly: 1000 tenant rev, 580 expenses (500 loan + 80 @ 8% of 1000), net = 420
+    expect(body.monthly[0].revenue).toBe(1000);
+    expect(body.monthly[0].expenses).toBe(580);
+    expect(body.monthly[0].net).toBe(420);
+
+    // Verify actualPayment was passed to the service
+    expect(vi.mocked(calculateAnnualLoanPayments)).toHaveBeenCalledWith(
+      expect.objectContaining({ actualPayment: 500 })
+    );
+    expect(vi.mocked(calculateAnnualTenantRevenue)).toHaveBeenCalled();
+    expect(vi.mocked(getTenantRevenueForMonth)).toHaveBeenCalled();
   });
 });
