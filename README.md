@@ -95,25 +95,14 @@ Tests use a mocked database via Vitest — no real database needed. See `vitest.
 
 ## Database Backups
 
-Automatic daily backups run at 3:00am via a LaunchAgent, keeping 7 days of backups.
+A backup is created automatically every time the server starts (`npm run dev` / `npm start`), at most once per day. Backups are stored in `backups/` as `local.db.YYYY-MM-DD`. Old backups are auto-pruned after 7 days.
 
 ```bash
-# Manual backup
+# Manual backup (same script run on server start)
 npm run db:backup
 
-# Backups are stored in:
+# View backups
 ls backups/
-```
-
-Backups are stored in `backups/` as `local.db.YYYY-MM-DD`. Old backups are auto-pruned after 7 days.
-
-The LaunchAgent is already installed. To reinstall or move the project:
-
-```bash
-launchctl unload ~/Library/LaunchAgents/com.housing-investment.db-backup.plist
-# update paths in scripts/com.housing-investment.db-backup.plist
-cp scripts/com.housing-investment.db-backup.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.housing-investment.db-backup.plist
 ```
 
 ## CI

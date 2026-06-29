@@ -8,10 +8,17 @@ DB_PATH="$PROJECT_DIR/local.db"
 mkdir -p "$BACKUP_DIR"
 
 DATE=$(date +%Y-%m-%d)
+BACKUP_FILE="$BACKUP_DIR/local.db.$DATE"
+
+# skip if already backed up today
+if [ -f "$BACKUP_FILE" ]; then
+  echo "backup already exists for $DATE, skipping"
+  exit 0
+fi
 
 if [ -f "$DB_PATH" ]; then
-  cp "$DB_PATH" "$BACKUP_DIR/local.db.$DATE"
-  echo "backup created: $BACKUP_DIR/local.db.$DATE"
+  cp "$DB_PATH" "$BACKUP_FILE"
+  echo "backup created: $BACKUP_FILE"
 else
   echo "no database found at $DB_PATH, skipping"
   exit 0
