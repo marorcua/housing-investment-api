@@ -1,5 +1,6 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
 import * as dotenv from 'dotenv';
@@ -20,14 +21,16 @@ const app = new Hono();
 
 app.use('*', cors());
 
-// Global error handler
-app.onError((err, c) => {
+export const errorHandler = (err: Error, c: Context) => {
   console.error('Unhandled error:', err);
   if (err instanceof HTTPException) {
     return c.json({ error: err.message }, err.status);
   }
   return c.json({ error: 'Internal server error' }, 500);
-});
+};
+
+// Global error handler
+app.onError(errorHandler);
 
 // Public routes (no auth required)
 app.get('/', (c) => {

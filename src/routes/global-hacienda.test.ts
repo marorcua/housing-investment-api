@@ -112,6 +112,7 @@ describe('globalHacienda route', () => {
     ]);
     const recurringChain = makeChainResolve([
       { id: 1, propertyId: 1, name: 'Community', type: 'community', amount: 0, percentage: 8, frequency: 'monthly', startDate: '2024-01-01' },
+      { id: 2, propertyId: 1, name: 'Insurance', type: 'insurance_housing', amount: 60000, percentage: null, frequency: 'annual', startDate: '2024-01-01' },
     ]);
     const emptyChain = makeChainResolve([]);
 
@@ -128,16 +129,21 @@ describe('globalHacienda route', () => {
     expect(res.status).toBe(200);
     const body: any = await res.json();
 
-    // Annual: 12000 tenant rev, 5000 loan + 960 (8% of 12000) expenses = 5960, net = 6040
+    // Annual: 12000 tenant rev, 5000 loan + 960 (8% of 12000) + 600 (insurance annual) = 6560 exp, net = 5440
     const yearData = body.annual.find((d: any) => d.year === 2024);
     expect(yearData.revenue).toBe(12000);
-    expect(yearData.expenses).toBe(5960);
-    expect(yearData.net).toBe(6040);
+    expect(yearData.expenses).toBe(6560);
+    expect(yearData.net).toBe(5440);
 
-    // Monthly: 1000 tenant rev, 580 expenses (500 loan + 80 @ 8% of 1000), net = 420
+    // Monthly (month 1): 1000 tenant rev, 500 loan + 80 (8% of 1000) + 600 (annual in start month) = 1180 exp, net = -180
     expect(body.monthly[0].revenue).toBe(1000);
-    expect(body.monthly[0].expenses).toBe(580);
-    expect(body.monthly[0].net).toBe(420);
+    expect(body.monthly[0].expenses).toBe(1180);
+    expect(body.monthly[0].net).toBe(-180);
+
+    // Monthly (month 2): 1000 tenant rev, 500 loan + 80 = 580 exp, net = 420
+    expect(body.monthly[1].revenue).toBe(1000);
+    expect(body.monthly[1].expenses).toBe(580);
+    expect(body.monthly[1].net).toBe(420);
 
     // Verify actualPayment was passed to the service
     expect(vi.mocked(calculateAnnualLoanPayments)).toHaveBeenCalledWith(

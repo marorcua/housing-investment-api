@@ -183,6 +183,20 @@ describe('tenants route', () => {
     expect(res.status).toBe(200);
   });
 
+  it('GET /property/:propertyId — with tenants and rent increases', async () => {
+    const tenant = {
+      id: 1, propertyId: 1, name: 'Test', startDate: '2024-01-01',
+      endDate: null, monthlyRent: 100000,
+    };
+    mockResolve([tenant]);
+    const res = await app.request('/tenants/property/1');
+    const body = await res.json() as any[];
+    expect(res.status).toBe(200);
+    expect(body).toHaveLength(1);
+    expect(body[0].monthlyRent).toBe(1000);
+    expect(Array.isArray(body[0].rentIncreases)).toBe(true);
+  });
+
   it('POST / — creates', async () => {
     mockResolve([{ id: 1, name: 'John', monthlyRent: 80000, propertyId: 1, startDate: '2024-01-01', endDate: null }]);
     const res = await app.request('/tenants', {
@@ -326,6 +340,16 @@ describe('loans route', () => {
     expect((await res.json() as any).principal).toBe(1000000);
   });
 
+  it('POST / — creates with actualPayment', async () => {
+    mockResolve([{ id: 2, name: 'Loan2', principal: 100000000, interestRate: 3, termYears: 25, propertyId: 1, startDate: '2024-01-01', actualPayment: 533000 }]);
+    const res = await app.request('/loans', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ propertyId: 1, name: 'Loan2', principal: 1000000, interestRate: 3, termYears: 25, startDate: '2024-01-01', actualPayment: 5330 }),
+    });
+    expect(res.status).toBe(201);
+    expect((await res.json() as any).actualPayment).toBe(5330);
+  });
+
   it('PATCH /:id', async () => {
     mockResolve([{ id: 1, name: 'Loan1', principal: 150000000, interestRate: 3, termYears: 25, propertyId: 1, startDate: '2024-01-01' }]);
     const res = await app.request('/loans/1', {
@@ -333,6 +357,16 @@ describe('loans route', () => {
       body: JSON.stringify({ principal: 1500000 }),
     });
     expect(res.status).toBe(200);
+  });
+
+  it('PATCH /:id — with actualPayment', async () => {
+    mockResolve([{ id: 1, name: 'Loan1', principal: 100000000, interestRate: 3, termYears: 25, propertyId: 1, startDate: '2024-01-01', actualPayment: 533000 }]);
+    const res = await app.request('/loans/1', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actualPayment: 5330 }),
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json() as any).actualPayment).toBe(5330);
   });
 
   it('PATCH /:id — 404', async () => {
@@ -375,6 +409,16 @@ describe('recurringExpenses route', () => {
     expect(res.status).toBe(201);
   });
 
+  it('POST / — creates with percentage', async () => {
+    mockResolve([{ id: 2, name: 'Community', amount: 0, percentage: 8, type: 'community', frequency: 'monthly', propertyId: 1, startDate: '2024-01-01' }]);
+    const res = await app.request('/recurring-expenses', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ propertyId: 1, name: 'Community', type: 'community', percentage: 8, frequency: 'monthly', startDate: '2024-01-01' }),
+    });
+    expect(res.status).toBe(201);
+    expect((await res.json() as any).percentage).toBe(8);
+  });
+
   it('PATCH /:id', async () => {
     mockResolve([{ id: 1, name: 'Insurance', amount: 70000, type: 'insurance_housing', frequency: 'annual', propertyId: 1, startDate: '2024-01-01' }]);
     const res = await app.request('/recurring-expenses/1', {
@@ -382,6 +426,16 @@ describe('recurringExpenses route', () => {
       body: JSON.stringify({ amount: 700 }),
     });
     expect(res.status).toBe(200);
+  });
+
+  it('PATCH /:id — with percentage', async () => {
+    mockResolve([{ id: 1, name: 'Community', amount: 0, percentage: 10, type: 'community', frequency: 'monthly', propertyId: 1, startDate: '2024-01-01' }]);
+    const res = await app.request('/recurring-expenses/1', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ percentage: 10 }),
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json() as any).percentage).toBe(10);
   });
 
   it('PATCH /:id — 404', async () => {

@@ -31,15 +31,7 @@ vi.mock('./db/index.js', () => ({ db: mockDb }));
 
 vi.mock('@hono/node-server', () => ({ serve: vi.fn() }));
 
-import app from './index.js';
-
-const errorHandler: Parameters<typeof app.onError>[0] = (err, c) => {
-  console.error('Unhandled error:', err);
-  if (err instanceof HTTPException) {
-    return c.json({ error: err.message }, err.status);
-  }
-  return c.json({ error: 'Internal server error' }, 500);
-};
+import app, { errorHandler } from './index.js';
 
 describe('app index', () => {
   beforeEach(() => {

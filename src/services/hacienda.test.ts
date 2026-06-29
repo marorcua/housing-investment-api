@@ -275,6 +275,26 @@ describe('getTenantRevenueForMonth additional edge cases', () => {
     expect(result.revenue).toBeCloseTo(31, 0);
     expect(result.activeDays).toBe(1);
   });
+
+  it('applies rent increases when computing revenue', () => {
+    const result = getTenantRevenueForMonth(
+      {
+        id: 1, name: 'Escalated', monthlyRent: 1000,
+        startDate: '2022-01-01', endDate: null,
+        rentIncreases: [
+          { yearOffset: 2, percentage: 10, applied: true },
+          { yearOffset: 1, percentage: 5, applied: false },
+          { yearOffset: 5, percentage: 20, applied: true },
+        ],
+      },
+      2024, 6
+    );
+    // Base rent: 1000
+    // Year 2 increase (applied, 2 <= 2024-2022=2): 1000 * 1.10 = 1100
+    // Year 1 increase (applied=false skipped)
+    // Year 5 increase (applied=true but 5 > 2 skipped)
+    expect(result.revenue).toBeCloseTo(1100, 1);
+  });
 });
 
 describe('calculateAnnualLoanPayments additional edge cases', () => {
