@@ -12,15 +12,25 @@ npm install
 npm run dev            # starts on http://localhost:3000
 ```
 
+## Database
+
+By default the API uses a local SQLite file (`local.db`). To use Turso (remote), set the env vars below.
+
+Initialize the database tables:
+
+```bash
+npm run db:push
+```
+
 ## Environment Variables
 
-| Variable | Description |
-|---|---|
-| `PORT` | Server port (default 3000) |
-| `TURSO_CONNECTION_URL` | Turso database URL |
-| `TURSO_AUTH_TOKEN` | Turso auth token |
-| `JWT_SECRET` | Secret for JWT signing |
-| `API_PASSWORD` | Login password (default: `admin`) |
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | `3000` | Server port |
+| `TURSO_CONNECTION_URL` | — | Turso database URL (omit for local SQLite) |
+| `TURSO_AUTH_TOKEN` | — | Turso auth token |
+| `JWT_SECRET` | auto-generated | Secret for JWT signing |
+| `API_PASSWORD` | `admin` | Login password |
 
 ## Auth
 
@@ -75,9 +85,20 @@ curl http://localhost:3000/properties \
 ## Testing
 
 ```bash
-npm test           # run once
-npm run test:watch # watch mode
+npm test            # run once (with coverage)
+npm run test:watch  # watch mode
 ```
+
+Coverage thresholds: 80% statements/functions/lines, 75% branches.
+
+Tests use a mocked database via Vitest — no real database needed. See `vitest.setup.ts` for the mock setup.
+
+## CI
+
+GitHub Actions runs on every push:
+
+1. `npm run build` — TypeScript compilation check
+2. `npx vitest run --coverage` — unit tests with coverage
 
 ## Tech Stack
 
