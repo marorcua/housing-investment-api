@@ -4,16 +4,17 @@ import type { Context } from 'hono';
 import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
 import * as dotenv from 'dotenv';
-import { authMiddleware } from './middleware/auth.js';
-import authRoute from './routes/auth.js';
-import propertiesRoute from './routes/properties.js';
-import revenuesRoute from './routes/revenues.js';
-import expensesRoute from './routes/expenses.js';
-import haciendaRoute from './routes/hacienda.js';
-import globalHaciendaRoute from './routes/globalHacienda.js';
-import tenantsRoute from './routes/tenants.js';
-import loansRoute from './routes/loans.js';
-import recurringExpensesRoute from './routes/recurringExpenses.js';
+import { authMiddleware } from './application/middleware/auth.js';
+import authRoute from './application/routes/auth.js';
+import propertiesRoute from './application/routes/properties.js';
+import revenuesRoute from './application/routes/revenues.js';
+import expensesRoute from './application/routes/expenses.js';
+import haciendaRoute from './application/routes/hacienda.js';
+import globalHaciendaRoute from './application/routes/globalHacienda.js';
+import tenantsRoute from './application/routes/tenants.js';
+import loansRoute from './application/routes/loans.js';
+import recurringExpensesRoute from './application/routes/recurringExpenses.js';
+import { startDailyBackup } from './infrastructure/scheduler.js';
 
 dotenv.config();
 
@@ -64,5 +65,8 @@ serve({
   fetch: app.fetch,
   port,
 });
+
+// Schedule daily database backup at 3:00 AM
+startDailyBackup();
 
 export default app;

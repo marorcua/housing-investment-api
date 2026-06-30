@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { eurosToCents, centsToEuros } from './money.js';
+import { eurosToCents, centsToEuros } from '../../src/domain/money.js';
 
 describe('eurosToCents', () => {
   it('converts whole euros to cents', () => {

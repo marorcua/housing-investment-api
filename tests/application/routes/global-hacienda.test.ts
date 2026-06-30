@@ -17,9 +17,9 @@ const mockDb = vi.hoisted(() => ({
   select: vi.fn(() => mockChain),
 }));
 
-vi.mock('../db/index.js', () => ({ db: mockDb }));
+vi.mock('../../../src/infrastructure/db/index.js', () => ({ db: mockDb }));
 
-vi.mock('../services/hacienda.js', () => ({
+vi.mock('../../../src/domain/services/hacienda.js', () => ({
   calculateAnnualTenantRevenue: vi.fn(() => 12000),
   calculateAnnualLoanPayments: vi.fn(() => ({
     annualInterest: 3000,
@@ -30,8 +30,8 @@ vi.mock('../services/hacienda.js', () => ({
   calculateMonthlyPayment: vi.fn(() => 500),
 }));
 
-import { calculateAnnualTenantRevenue, calculateAnnualLoanPayments, getTenantRevenueForMonth } from '../services/hacienda.js';
-import globalHaciendaRoute from './globalHacienda.js';
+import { calculateAnnualTenantRevenue, calculateAnnualLoanPayments, getTenantRevenueForMonth } from '../../../src/domain/services/hacienda.js';
+import globalHaciendaRoute from '../../../src/application/routes/globalHacienda.js';
 
 const app = new Hono();
 app.route('/hacienda-global', globalHaciendaRoute);

@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
-import { db } from '../db/index.js';
-import { properties } from '../db/schema.js';
+import { db } from '../../infrastructure/db/index.js';
+import { properties } from '../../infrastructure/db/schema.js';
 import { eq } from 'drizzle-orm';
-import { eurosToCents, centsToEuros } from '../utils/money.js';
+import { eurosToCents, centsToEuros } from '../../domain/money.js';
 
 const propertiesRoute = new Hono();
 

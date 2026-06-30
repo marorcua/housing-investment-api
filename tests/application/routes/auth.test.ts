@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { Hono } from 'hono';
-import authRoute from './auth.js';
+import authRoute from '../../../src/application/routes/auth.js';
 
 describe('POST /auth/login', () => {
   beforeAll(() => {

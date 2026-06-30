@@ -31,7 +31,7 @@ vi.mock('./db/index.js', () => ({ db: mockDb }));
 
 vi.mock('@hono/node-server', () => ({ serve: vi.fn() }));
 
-import app, { errorHandler } from './index.js';
+import app, { errorHandler } from '../src/index.js';
 
 describe('app index', () => {
   beforeEach(() => {

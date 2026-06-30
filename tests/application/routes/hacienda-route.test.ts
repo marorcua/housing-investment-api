@@ -17,9 +17,9 @@ const mockDb = vi.hoisted(() => ({
   select: vi.fn(() => mockChain),
 }));
 
-vi.mock('../db/index.js', () => ({ db: mockDb }));
+vi.mock('../../../src/infrastructure/db/index.js', () => ({ db: mockDb }));
 
-vi.mock('../services/hacienda.js', () => ({
+vi.mock('../../../src/domain/services/hacienda.js', () => ({
   calculateAnnualAmortization: vi.fn(() => 1500),
   calculateNetYield: vi.fn(() => ({
     netYield: 5.2,
@@ -35,7 +35,7 @@ vi.mock('../services/hacienda.js', () => ({
   calculateAnnualTenantRevenue: vi.fn(() => 12000),
 }));
 
-import haciendaRoute from './hacienda.js';
+import haciendaRoute from '../../../src/application/routes/hacienda.js';
 
 const app = new Hono();
 app.route('/hacienda', haciendaRoute);

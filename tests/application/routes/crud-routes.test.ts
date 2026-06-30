@@ -26,13 +26,13 @@ const mockDb = vi.hoisted(() => ({
   delete: vi.fn(() => mockChain),
 }));
 
-vi.mock('../db/index.js', () => ({ db: mockDb }));
+vi.mock('../../../src/infrastructure/db/index.js', () => ({ db: mockDb }));
 
-import expensesRoute from './expenses.js';
-import revenuesRoute from './revenues.js';
-import tenantsRoute from './tenants.js';
-import loansRoute from './loans.js';
-import recurringExpensesRoute from './recurringExpenses.js';
+import expensesRoute from '../../../src/application/routes/expenses.js';
+import revenuesRoute from '../../../src/application/routes/revenues.js';
+import tenantsRoute from '../../../src/application/routes/tenants.js';
+import loansRoute from '../../../src/application/routes/loans.js';
+import recurringExpensesRoute from '../../../src/application/routes/recurringExpenses.js';
 
 const mount = (route: any, prefix: string) => {
   const app = new Hono();

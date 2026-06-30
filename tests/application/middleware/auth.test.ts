@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { Hono } from 'hono';
 import { jwtVerify } from 'jose';
-import { createToken, authMiddleware } from './auth.js';
+import { createToken, authMiddleware } from '../../../src/application/middleware/auth.js';
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'dev-secret-change-in-production');
 const JWT_ISSUER = 'housing-investment-api';

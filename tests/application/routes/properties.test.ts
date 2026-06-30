@@ -26,9 +26,9 @@ const mockDb = vi.hoisted(() => ({
   delete: vi.fn(() => mockChain),
 }));
 
-vi.mock('../db/index.js', () => ({ db: mockDb }));
+vi.mock('../../../src/infrastructure/db/index.js', () => ({ db: mockDb }));
 
-import propertiesRoute from './properties.js';
+import propertiesRoute from '../../../src/application/routes/properties.js';
 
 const mount = () => {
   const app = new Hono();

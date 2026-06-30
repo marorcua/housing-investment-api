@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
-import { db } from '../db/index.js';
-import { properties, tenants, loans, recurringExpenses, revenues, expenses, rentIncreases } from '../db/schema.js';
+import { db } from '../../infrastructure/db/index.js';
+import { properties, tenants, loans, recurringExpenses, revenues, expenses, rentIncreases } from '../../infrastructure/db/schema.js';
 import { eq } from 'drizzle-orm';
-import { calculateAnnualTenantRevenue, calculateAnnualLoanPayments, getTenantRevenueForMonth, calculateMonthlyPayment } from '../services/hacienda.js';
-import type { TenantForRevenue } from '../services/hacienda.js';
-import { centsToEuros } from '../utils/money.js';
+import { calculateAnnualTenantRevenue, calculateAnnualLoanPayments, getTenantRevenueForMonth, calculateMonthlyPayment } from '../../domain/services/hacienda.js';
+import type { TenantForRevenue } from '../../domain/services/hacienda.js';
+import { centsToEuros } from '../../domain/money.js';
 
 const globalHaciendaRoute = new Hono();
 
