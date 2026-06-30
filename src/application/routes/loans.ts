@@ -17,7 +17,7 @@ const loanSchema = z.object({
   interestRate: z.number().nonnegative(),
   termYears: z.number().int().positive(),
   startDate: z.string().regex(dateRegex, 'Date must be YYYY-MM-DD'),
-  actualPayment: z.number().positive().optional(),
+  actualPayment: z.number().positive().optional().nullable(),
 });
 
 const formatLoan = (l: typeof loans.$inferSelect) => ({
