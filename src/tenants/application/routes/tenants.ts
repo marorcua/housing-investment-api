@@ -74,12 +74,17 @@ export function createTenantsRoutes(service: TenantService): Hono {
 
   incRouter.post('/', zValidator('json', increaseSchema), async (c) => {
     const data = c.req.valid('json');
+    try {
       const inc = await service.createIncrease({
         tenantId: parseInt(c.req.param('tenantId')!),
-      yearOffset: data.yearOffset,
-      percentage: data.percentage,
-    });
-    return c.json(formatIncrease(inc), 201);
+        yearOffset: data.yearOffset,
+        percentage: data.percentage,
+      });
+      return c.json(formatIncrease(inc), 201);
+    } catch (e: any) {
+      if (e.message?.includes('Duplicate')) return c.json({ error: e.message }, 409);
+      throw e;
+    }
   });
 
   incRouter.patch('/:increaseId', zValidator('json', increaseSchema.partial().extend({ applied: z.boolean().optional() })), async (c) => {

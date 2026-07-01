@@ -6,7 +6,7 @@ import {
   calculateAnnualLoanPayments,
   getTenantRevenueForMonth,
   calculateAnnualTenantRevenue,
-} from '../../../src/domain/services/hacienda.js';
+} from '../../../src/hacienda/domain/HaciendaCalculator.js';
 
 describe('calculateAnnualAmortization', () => {
   it('calculates 3% of the building value based on higher of purchase price or cadastral value', () => {

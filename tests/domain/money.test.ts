@@ -1,64 +1,64 @@
 import { describe, it, expect } from 'vitest';
-import { eurosToCents, centsToEuros } from '../../src/domain/money.js';
+import { Money } from '../../src/shared/domain/valueObjects/Money.js';
 
-describe('eurosToCents', () => {
+describe('Money.fromEuros', () => {
   it('converts whole euros to cents', () => {
-    expect(eurosToCents(100)).toBe(10000);
+    expect(Money.fromEuros(100).toCents()).toBe(10000);
   });
 
   it('converts decimal euros to cents', () => {
-    expect(eurosToCents(99.99)).toBe(9999);
+    expect(Money.fromEuros(99.99).toCents()).toBe(9999);
   });
 
   it('rounds to nearest cent', () => {
-    expect(eurosToCents(10.345)).toBe(1035);
-    expect(eurosToCents(10.344)).toBe(1034);
+    expect(Money.fromEuros(10.345).toCents()).toBe(1035);
+    expect(Money.fromEuros(10.344).toCents()).toBe(1034);
   });
 
   it('handles zero', () => {
-    expect(eurosToCents(0)).toBe(0);
+    expect(Money.fromEuros(0).toCents()).toBe(0);
   });
 
   it('handles negative values', () => {
-    expect(eurosToCents(-50.5)).toBe(-5050);
+    expect(Money.fromEuros(-50.5).toCents()).toBe(-5050);
   });
 
   it('handles large values', () => {
-    expect(eurosToCents(1_000_000)).toBe(100_000_000);
+    expect(Money.fromEuros(1_000_000).toCents()).toBe(100_000_000);
   });
 
   it('handles single cent euro values', () => {
-    expect(eurosToCents(0.01)).toBe(1);
-    expect(eurosToCents(0.99)).toBe(99);
+    expect(Money.fromEuros(0.01).toCents()).toBe(1);
+    expect(Money.fromEuros(0.99).toCents()).toBe(99);
   });
 });
 
-describe('centsToEuros', () => {
+describe('Money.fromCents', () => {
   it('converts cents to whole euros', () => {
-    expect(centsToEuros(10000)).toBe(100);
+    expect(Money.fromCents(10000).toEuros()).toBe(100);
   });
 
   it('converts cents to decimal euros', () => {
-    expect(centsToEuros(9999)).toBe(99.99);
+    expect(Money.fromCents(9999).toEuros()).toBe(99.99);
   });
 
   it('handles zero', () => {
-    expect(centsToEuros(0)).toBe(0);
+    expect(Money.fromCents(0).toEuros()).toBe(0);
   });
 
   it('handles negative values', () => {
-    expect(centsToEuros(-5050)).toBe(-50.5);
+    expect(Money.fromCents(-5050).toEuros()).toBe(-50.5);
   });
 
   it('rounds to 2 decimal places', () => {
-    expect(centsToEuros(1)).toBe(0.01);
-    expect(centsToEuros(123)).toBe(1.23);
+    expect(Money.fromCents(1).toEuros()).toBe(0.01);
+    expect(Money.fromCents(123).toEuros()).toBe(1.23);
   });
 
-  it('is inverse of eurosToCents', () => {
+  it('is inverse of fromEuros', () => {
     const original = [0, 1, 100, 99.99, 0.01, 1000000, -50.5];
     for (const val of original) {
-      expect(centsToEuros(eurosToCents(val))).toBeCloseTo(val, 2);
+      expect(Money.fromCents(Money.fromEuros(val).toCents()).toEuros()).toBeCloseTo(val, 2);
     }
   });
 });

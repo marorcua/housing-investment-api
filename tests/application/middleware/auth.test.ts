@@ -1,26 +1,27 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { Hono } from 'hono';
 import { jwtVerify } from 'jose';
-import { createToken, authMiddleware } from '../../../src/application/middleware/auth.js';
+import { createAuthMiddleware, createToken } from '../../../src/auth/application/middleware/auth.js';
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'dev-secret-change-in-production');
+const JWT_SECRET = 'test-secret';
 const JWT_ISSUER = 'housing-investment-api';
 
 describe('createToken', () => {
   it('returns a string token', async () => {
-    const token = await createToken('test-user');
+    const token = await createToken(JWT_SECRET, 'test-user');
     expect(typeof token).toBe('string');
     expect(token.split('.')).toHaveLength(3); // JWT has 3 parts
   });
 
   it('produces a verifiable token with correct payload', async () => {
-    const token = await createToken('user-42');
-    const { payload } = await jwtVerify(token, JWT_SECRET, { issuer: JWT_ISSUER });
+    const token = await createToken(JWT_SECRET, 'user-42');
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret, { issuer: JWT_ISSUER });
     expect(payload.sub).toBe('user-42');
   });
 
   it('contains correct issuer and algorithm', async () => {
-    const token = await createToken('user');
+    const token = await createToken(JWT_SECRET, 'user');
     const header = JSON.parse(atob(token.split('.')[0]));
     expect(header.alg).toBe('HS256');
     const payload = JSON.parse(atob(token.split('.')[1]));
@@ -35,12 +36,13 @@ describe('authMiddleware', () => {
 
   beforeAll(() => {
     app = new Hono();
+    const authMiddleware = createAuthMiddleware(JWT_SECRET);
     app.get('/protected', authMiddleware, (c) => c.json({ ok: true }));
     app.get('/public', (c) => c.json({ ok: true }));
   });
 
   it('allows requests with valid token', async () => {
-    const token = await createToken('test');
+    const token = await createToken(JWT_SECRET, 'test');
     const res = await app.request('/protected', {
       headers: { Authorization: `Bearer ${token}` },
     });

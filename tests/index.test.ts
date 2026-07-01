@@ -27,7 +27,7 @@ const mockDb = vi.hoisted(() => ({
   delete: vi.fn(() => mockChain),
 }));
 
-vi.mock('./db/index.js', () => ({ db: mockDb }));
+vi.mock('../src/shared/infrastructure/db/index.js', () => ({ db: mockDb }));
 
 vi.mock('@hono/node-server', () => ({ serve: vi.fn() }));
 
